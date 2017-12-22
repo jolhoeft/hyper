@@ -16,7 +16,47 @@ use std::io::{self, copy, Read};
 use std::thread;
 
 static MISSING: &[u8] = b"Missing implementation";
+static NOTFOUND: &[u8] = b"Not Found";
 static INDEX: &str = "examples/responding_index.html";
+
+fn simple_file_upload(f: &str) -> Box<Future<Item = Response, Error = hyper::Error>> {
+    // Serve a file by reading it entirely into memory. Serving
+    // serveral 10GB files at once may have problems, but this method
+    // does not require two threads.
+    //
+    // On channel errors, we panic with the expect method. The thread
+    // ends at that point in any case.
+    let filename = f.to_string(); // we need to copy for lifetime issues
+    let (tx, rx) = oneshot::channel();
+    thread::spawn(move || {
+        let mut file = match File::open(filename) {
+            Ok(f) => f,
+            Err(_) => {
+                tx.send(Response::new()
+                        .with_status(StatusCode::NotFound)
+                        .with_header(ContentLength(NOTFOUND.len() as u64))
+                        .with_body(NOTFOUND))
+                    .expect("Send error on open");
+                return;
+            },
+        };
+        let mut buf: Vec<u8> = Vec::new();
+        match copy(&mut file, &mut buf) {
+            Ok(_) => {
+                let res = Response::new()
+                    .with_header(ContentLength(buf.len() as u64))
+                    .with_body(buf);
+                tx.send(res).expect("Send error on successful file read");
+            },
+            Err(_) => {
+                tx.send(Response::new().with_status(StatusCode::InternalServerError)).
+                    expect("Send error on error reading file");
+            },
+        };
+    });
+
+    Box::new(rx.map_err(|e| Error::from(io::Error::new(io::ErrorKind::Other, e))))
+}
 
 struct ResponseExamples;
 
@@ -29,40 +69,7 @@ impl Service for ResponseExamples {
     fn call(&self, req: Request) -> Self::Future {
         match (req.method(), req.path()) {
             (&Get, "/") | (&Get, "/index.html") => {
-                // Serve a file by reading it entirely into
-                // memory. Serving serveral 10GB files at once may
-                // have problems, but this method does not require two
-                // threads.
-                //
-                // On channel errors, we panic with the expect
-                // method. The thread ends at that point in any case.
-                let (tx, rx) = oneshot::channel();
-                thread::spawn(move || {
-                    let mut file = match File::open(INDEX) {
-                        Ok(f) => f,
-                        Err(_) => {
-                            tx.send(Response::new().with_status(StatusCode::NotFound)).
-                                expect("Send error on open");
-                            return;
-                        },
-                    };
-                    let mut buf: Vec<u8> = Vec::new();
-                    match copy(&mut file, &mut buf) {
-                        Ok(_) => {
-                            let res = Response::new()
-                                .with_header(ContentLength(buf.len() as u64))
-                                .with_body(buf);
-                            tx.send(res).expect("Send error on successful file read");
-                        },
-                        Err(_) => {
-                            tx.send(Response::new().with_status(StatusCode::InternalServerError)).
-                                expect("Send error on error reading file");
-                            return;
-                        },
-                    };
-                });
-                
-                Box::new(rx.map_err(|e| Error::from(io::Error::new(io::ErrorKind::Other, e))))
+                simple_file_upload(INDEX)
             },
             (&Get, "/big_file.html") => {
                 // Stream a large file in chunks. This requires two
@@ -77,8 +84,11 @@ impl Service for ResponseExamples {
                     let mut file = match File::open(INDEX) {
                         Ok(f) => f,
                         Err(_) => {
-                            tx.send(Response::new().with_status(StatusCode::NotFound)).
-                                expect("Send error on open");
+                            tx.send(Response::new()
+                                    .with_status(StatusCode::NotFound)
+                                    .with_header(ContentLength(NOTFOUND.len() as u64))
+                                    .with_body(NOTFOUND))
+                                .expect("Send error on open");
                             return;
                         },
                     };
@@ -112,9 +122,7 @@ impl Service for ResponseExamples {
             },
             (&Get, "/no_file.html") => {
                 // Test what happens when file cannot be be found
-                Box::new(futures::future::ok(Response::new()
-                                             .with_header(ContentLength(MISSING.len() as u64))
-                                             .with_body(MISSING)))
+                simple_file_upload("this_file_should_not_exist.html")
             },
             (&Get, "/db_example.html") => {
                 // Fake db example, may not be necessary, very similar
