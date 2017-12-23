@@ -6,7 +6,7 @@ extern crate pretty_env_logger;
 use futures::{Future, Sink};
 use futures::sync::{mpsc, oneshot};
 
-use hyper::{Chunk, Get, Post, StatusCode};
+use hyper::{Chunk, Get, StatusCode};
 use hyper::error::Error;
 use hyper::header::ContentLength;
 use hyper::server::{Http, Service, Request, Response};
@@ -15,7 +15,6 @@ use std::fs::File;
 use std::io::{self, copy, Read};
 use std::thread;
 
-static MISSING: &[u8] = b"Missing implementation";
 static NOTFOUND: &[u8] = b"Not Found";
 static INDEX: &str = "examples/responding_index.html";
 
