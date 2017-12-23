@@ -7,7 +7,5 @@
     <a href="index.html">index.html</a> Top Level<br>
     <a href="big_file.html">big_file.html</a> This page, streamed in chunks<br>
     <a href="no_file.html">no_file.html</a> A 404 test, the requested file does not exist<br>
-    <a href="db_example.html">db_example.html</a> An example of how to connect to a database<br>
-    <a href="web_api_example.html">web_api_example.html</a> Rendering from a web api call<br>
   </body>
 </html>
