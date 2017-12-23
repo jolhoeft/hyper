@@ -19,7 +19,7 @@ static MISSING: &[u8] = b"Missing implementation";
 static NOTFOUND: &[u8] = b"Not Found";
 static INDEX: &str = "examples/responding_index.html";
 
-fn simple_file_upload(f: &str) -> Box<Future<Item = Response, Error = hyper::Error>> {
+fn simple_file_send(f: &str) -> Box<Future<Item = Response, Error = hyper::Error>> {
     // Serve a file by reading it entirely into memory. Serving
     // serveral 10GB files at once may have problems, but this method
     // does not require two threads.
@@ -69,7 +69,7 @@ impl Service for ResponseExamples {
     fn call(&self, req: Request) -> Self::Future {
         match (req.method(), req.path()) {
             (&Get, "/") | (&Get, "/index.html") => {
-                simple_file_upload(INDEX)
+                simple_file_send(INDEX)
             },
             (&Get, "/big_file.html") => {
                 // Stream a large file in chunks. This requires two
@@ -122,7 +122,7 @@ impl Service for ResponseExamples {
             },
             (&Get, "/no_file.html") => {
                 // Test what happens when file cannot be be found
-                simple_file_upload("this_file_should_not_exist.html")
+                simple_file_send("this_file_should_not_exist.html")
             },
             (&Get, "/db_example.html") => {
                 // Fake db example, may not be necessary, very similar
