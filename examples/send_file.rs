@@ -124,25 +124,6 @@ impl Service for ResponseExamples {
                 // Test what happens when file cannot be be found
                 simple_file_send("this_file_should_not_exist.html")
             },
-            (&Get, "/db_example.html") => {
-                // Fake db example, may not be necessary, very similar
-                // to serving files
-                Box::new(futures::future::ok(Response::new()
-                                             .with_header(ContentLength(MISSING.len() as u64))
-                                             .with_body(MISSING)))
-            },
-            (&Get, "/web_api_example.html") => {
-                // Run a web query against the web api below
-                Box::new(futures::future::ok(Response::new()
-                                             .with_header(ContentLength(MISSING.len() as u64))
-                                             .with_body(MISSING)))
-            },
-            (&Post, "/web_api") => {
-                // A web api to run against. Simple upcasing of the body.
-                Box::new(futures::future::ok(Response::new()
-                                             .with_header(ContentLength(MISSING.len() as u64))
-                                             .with_body(MISSING)))
-            },
             _ => {
                 Box::new(futures::future::ok(Response::new()
                                     .with_status(StatusCode::NotFound)))
