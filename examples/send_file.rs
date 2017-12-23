@@ -1,9 +1,9 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 extern crate futures;
 extern crate hyper;
 extern crate pretty_env_logger;
 
-use futures::{Future, Sink, Stream};
+use futures::{Future, Sink};
 use futures::sync::{mpsc, oneshot};
 
 use hyper::{Chunk, Get, Post, StatusCode};
